@@ -1,0 +1,2 @@
+# huffmanEncoding
+huffman code
