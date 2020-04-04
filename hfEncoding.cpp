@@ -288,7 +288,12 @@ int main()
     Tree tr = Tree(temp);
     tr.buildHfTree();
     getCode(tr.root, "");
-    cout << "================================" << endl;
+    sort(code.begin(),code.end());
+    cout<<"you can select string from: "<<endl;
+    for(vector<pair<string, string>>::iterator it = code.begin(); it != code.end(); it++){
+        cout<<(*it).first<<endl;
+    }
+    cout << "\n================================" << endl;
     cout << "input your char:";
     string tp;
     cin >> tp;
