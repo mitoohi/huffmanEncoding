@@ -3,8 +3,11 @@
 #include <deque>
 #include <algorithm>
 #include <vector>
+#include <fstream>
+#include <cstring>
+#include <iomanip>
 using namespace std;
-vector<pair<string, string>> static code; //存放最终编码
+vector<pair<string, string>> code; //存放最终编码
 struct Node
 {
     Node *parent, *lchild, *rchild;
@@ -231,7 +234,7 @@ void Tree::buildHfTree()
 }
 
 //前序遍历一棵树并对所有叶子节点编码
-void getCode(Node *root, string str)
+void codeLeaf(Node *root, string str)
 {
     if (root != NULL)
     {
@@ -242,13 +245,13 @@ void getCode(Node *root, string str)
         if (root->lchild != NULL)
         {
             str += "0";
-            getCode(root->lchild, str);
+            codeLeaf(root->lchild, str);
             str.pop_back();
         }
         if (root->rchild != NULL)
         {
             str += "1";
-            getCode(root->rchild, str);
+            codeLeaf(root->rchild, str);
             str.pop_back();
         }
     }
@@ -258,47 +261,128 @@ void Tree::sortLeafs()
 {
     sort(this->leafs.begin(), this->leafs.end());
 }
-//输入一个字符，输出其编码
-string encoding(vector<pair<string, string>> code, string str)
+//判断pair<string,int> temp中是否存在某个字符,若存在,自加1，否则添加该字符
+void addTemp(vector<pair<string, int>> &temp, const string &str)
+{
+    for (vector<pair<string, int>>::iterator it = temp.begin(); it != temp.end(); it++)
+    {
+        if (it->first == str)
+        {
+            (it->second)++;
+            return;
+        }
+    }
+    temp.push_back(pair<string, int>(str, 1));
+}
+//统计字符出现次数，并存入temp数组
+void countChar(const char *filename, vector<pair<string, int>> &temp)
+{
+    fstream myfile; //用来读取文件
+    int total = 0;
+    myfile.open(filename);
+    char buffer[1024] = {0}; //缓冲器，存放每一行的内容
+    while (!(myfile.eof()))
+    {
+        myfile.getline(buffer, 1024);
+        for (int i = 0; i < 1024; i++)
+        {
+            string str;
+            if (isalpha(buffer[i]))
+            {
+                str.push_back(buffer[i]);
+                addTemp(temp, str);
+                total++;
+            }
+        }
+    }
+    myfile.close();
+    sort(temp.begin(), temp.end());
+    cout << "字符的总个数为： " << total << " 个\t"
+         << "字符的种类一共有： " << temp.size() << " 种\n"
+         << endl;
+}
+//根据vector<pair<string, int>>数据计算各个字符出现的概率并存入deque<pair<float, string>>中
+void calcFreq(deque<pair<float, string>> &freq, vector<pair<string, int>> &temp)
+{
+    int total = 0;
+    for (vector<pair<string, int>>::iterator it = temp.begin(); it != temp.end(); it++)
+    {
+        total += it->second;
+    }
+    for (vector<pair<string, int>>::iterator it = temp.begin(); it != temp.end(); it++)
+    {
+        float p = ((float)(it->second) / (float)total);
+        freq.push_back(pair<float, string>(p, it->first));
+    }
+}
+//输出所有字符的编码
+void showCode()
+{
+    cout << "\n各个字符的Huffman编码如下：" << endl;
+    for (vector<pair<string, string>>::iterator it = code.begin(); it != code.end(); it++)
+    {
+        cout << it->first << "\t" << it->second << endl;
+    }
+}
+//根据输入字符返回其Huffman编码
+string getCode(string str)
 {
     for (vector<pair<string, string>>::iterator it = code.begin(); it != code.end(); it++)
     {
-        if ((*it).first == str)
+        if (str == it->first)
         {
-            return (*it).second;
+            return it->second;
         }
     }
-    return string("absence");
+    return str;
 }
-//判断一个字符是不是字母
-bool isalpha(char ch)
+//对读入文本编码并输出编码后的文本
+void enCoding(const char *filename1, const char *filename2)
 {
-    if ((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'))
+    fstream myfile;     //用来读取文件
+    fstream codingFile; //用来存放编码文件
+    myfile.open(filename1);
+    codingFile.open(filename2, ios::out);
+    char buffer[1024] = {0}; //缓冲器，存放每一行的内容
+    while (!(myfile.eof()))
     {
-        return true;
+        myfile.getline(buffer, 1024);
+        for (int i = 0; i < 1024; i++)
+        {
+            string str;
+            str.push_back(buffer[i]);
+            cout << getCode(str);
+            codingFile << getCode(str);
+        }
     }
-    return false;
+    myfile.close();
+    codingFile.close();
 }
 int main()
 {
-    deque<pair<float, string>> temp;
-    temp.push_front(pair<float, string>(0.5, "a1"));
-    temp.push_front(pair<float, string>(0.3, "a2"));
-    temp.push_front(pair<float, string>(0.2, "a3"));
-    Tree tr = Tree(temp);
-    tr.buildHfTree();
-    getCode(tr.root, "");
-    sort(code.begin(),code.end());
-    cout<<"you can select string from: "<<endl;
-    for(vector<pair<string, string>>::iterator it = code.begin(); it != code.end(); it++){
-        cout<<(*it).first<<endl;
+    vector<pair<string, int>> temp;
+    deque<pair<float, string>> freq;
+    countChar("originFile.txt", temp); //统计各个字符出现次数
+    calcFreq(freq, temp);              //计算各个字符出现的概率
+
+    cout << "各个字符出现的次数统计如下：" << endl;
+    for (vector<pair<string, int>>::iterator it = temp.begin(); it != temp.end(); it++)
+    {
+        cout << it->first << "\t" << it->second << "次" << endl;
     }
-    cout << "\n================================" << endl;
-    cout << "input your char:";
-    string tp;
-    cin >> tp;
-    string rt = encoding(code, tp);
-    cout << rt << endl;
+
+    cout << "各个字符出现的概率统计如下：" << endl;
+    for (deque<pair<float, string>>::iterator it = freq.begin(); it != freq.end(); it++)
+    {
+        cout << it->second << "\t" << it->first << endl;
+    }
+
+    Tree tr = Tree(freq);           //将字符加入树的叶子中
+    tr.buildHfTree();               //构造Huffman树
+    codeLeaf(tr.root, "");          //编码
+    sort(code.begin(), code.end()); //排序
+    showCode();
+    enCoding("originFile.txt", "codingFile.txt");
     system("pause");
     return 0;
 }
